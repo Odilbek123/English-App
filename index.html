@@ -235,7 +235,27 @@ svg{display:block}
 @keyframes cardIn{from{opacity:0;transform:translateY(34px) scale(.92)}to{opacity:1;transform:none}}
 @keyframes cardOut{to{opacity:0;transform:translateY(-26px) rotate(-3deg) scale(.96)}}
 .face{position:absolute;inset:0;border-radius:30px;background:var(--surface);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:42px 20px 22px;-webkit-backface-visibility:hidden;backface-visibility:hidden;box-shadow:0 26px 40px -26px rgba(5,8,60,.75);overflow:hidden}
-.face.back{transform:rotateY(180deg)}
+.face.back{transform:rotateY(180deg);justify-content:flex-start;align-items:stretch;padding:14px 16px 16px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.card.flat{transform:none!important;transform-style:flat;transition:none}
+.card.flat .front{display:none}
+.card.flat .back{transform:none}
+.b-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none}
+.back .lang{position:static}
+.b-main{margin:auto 0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;flex:none}
+.listen{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:9px 16px 9px 12px;border-radius:999px;background:var(--pen-soft);color:var(--pen);font-weight:700;font-size:15.5px;transition:transform .15s}
+.listen:active{transform:scale(.93)}
+.exs{flex:none;text-align:left}
+.exs:empty{display:none}
+.session:not(.review) .exs{display:none}
+.ex{display:block;width:100%;padding:11px 2px;border-top:1px solid var(--line);text-align:left}
+.ex .e{display:block;font-size:17px;line-height:1.3;color:var(--ink);transition:color .15s}
+.ex .r{display:block;font-size:14.5px;line-height:1.3;color:var(--ink-2);margin-top:3px}
+.ex:active .e{color:var(--pen)}
+.ex mark{background:linear-gradient(transparent 58%,var(--mark) 58%);color:inherit;font-weight:700;border-radius:2px;padding:0 1px}
+[data-theme=dark] .ex mark{background:none;color:var(--mark)}
+.ex-more{display:block;margin:2px auto 0;padding:9px 14px;font-size:14.5px;font-weight:700;color:var(--pen)}
+.ex-more:disabled{opacity:.5}
+.ex-info{border-top:1px solid var(--line);padding:12px 2px 2px;color:var(--ink-3);font-size:14.5px;text-align:center}
 .lang{position:absolute;top:16px;left:18px;font-size:13px;font-weight:700;color:var(--ink-2);background:var(--surface-2);padding:5px 11px;border-radius:999px}
 .face .say{position:absolute;top:8px;right:10px;width:44px;height:44px;color:var(--pen)}
 .word{font-family:var(--word);font-weight:700;letter-spacing:-.02em;line-height:1.12;overflow-wrap:anywhere;max-width:100%}
@@ -245,7 +265,7 @@ svg{display:block}
 .card.bad .hl{background-image:linear-gradient(var(--bad-soft),var(--bad-soft))}
 .card.bad.flip .hl{color:var(--ink)}
 .note{color:var(--ink-2);font-size:15px;margin-top:12px;max-width:30ch;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.verdict{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:5px 12px 5px 8px;border-radius:999px;white-space:nowrap}
+.verdict{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:5px 12px 5px 8px;border-radius:999px;white-space:nowrap}
 .card.ok .verdict{background:var(--ok-soft);color:var(--ok)}
 .card.bad .verdict{background:var(--bad-soft);color:var(--bad)}
 .verdict svg path{stroke-dasharray:24;stroke-dashoffset:24}
@@ -260,6 +280,10 @@ svg{display:block}
 .s-form.shake{animation:shake .4s}
 @keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
 .s-skip{align-self:center;margin-top:6px;padding:10px 18px;font-weight:600;font-size:15.5px;color:rgba(255,255,255,.8)}
+.s-next{display:none;width:auto;flex:none;margin:10px 18px 0;min-height:58px}
+.session.review .s-next{display:flex}
+.session.review .s-form,.session.review .s-skip,.session.review .s-fb{display:none}
+.session.review .s-stage{max-height:none}
 .sum{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:8px 18px 12px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .sum .ringbox{margin:18px 0 14px}
 .sum .ring{color:var(--mark)}
@@ -351,6 +375,8 @@ function migrate(d) {
     id: String(w.id), en: String(w.en), ru: String(w.ru), note: String(w.note || ''), at: +w.at || Date.now(),
     box: Math.max(0, Math.min(5, +w.box || 0)), due: +w.due || 0, ok: +w.ok || 0, bad: +w.bad || 0, run: +w.run || 0,
     last: +w.last || 0, learnedAt: +w.learnedAt || 0, seen: !!w.seen,
+    ex: (Array.isArray(w.ex) ? w.ex : []).filter(x => x && typeof x.e === 'string' && x.e).slice(0, 3).map(x => ({ e: String(x.e), r: String(x.r || '') })),
+    exAt: +w.exAt || 0, ms: Math.max(0, +w.ms || 0),
   }));
   d.log = (Array.isArray(d.log) ? d.log : []).filter(e => Array.isArray(e) && e.length >= 3);
   d.seq = Math.max(+d.seq || 1, d.words.length + 1, ...d.words.map(w => (parseInt(w.id, 36) || 0) + 1));
@@ -426,13 +452,21 @@ function judge(input, card) {
 }
 
 /* ================= spaced repetition ================= */
-function grade(card, ok) {
+// Быстрый ответ — тот, что дан почти без раздумий: около трёх секунд плюс время на набор букв.
+function quickLimit(card) {
+  const lang = card.dir === 'ru-en' ? 'en' : 'ru';
+  return 3000 + 400 * norm(variants(card.w[lang])[0] || '', lang).length;
+}
+function grade(card, ok, ms) {
   const w = card.w, now = Date.now();
   S.log.push([now, w.id, ok ? 1 : 0]);
   w.last = now;
   if (ok) {
     w.ok++; w.run++;
-    if (!card.early) { w.box = Math.min(w.box + 1, 5); w.due = dayStart(now) + INTERVALS[w.box] * DAY; }
+    if (ms > 0) w.ms = Math.round(w.ms ? w.ms * .6 + Math.min(ms, 60000) * .4 : Math.min(ms, 60000));
+    // Слово, которое уже знакомо и вспоминается сразу, перескакивает через уровень и уходит на более долгий срок.
+    const step = ms > 0 && ms < quickLimit(card) && w.box >= 1 ? 2 : 1;
+    if (!card.early) { w.box = Math.min(w.box + step, 5); w.due = dayStart(now) + INTERVALS[w.box] * DAY; }
     if (w.box >= LEARNED && !w.learnedAt) w.learnedAt = now;
   } else {
     w.bad++; w.run = 0;
@@ -460,7 +494,9 @@ function buildQueue(mode) {
   if (mode === 'hard') {
     pick = hardWords().slice(0, size).map(w => ({ w, early: w.seen && w.due > now }));
   } else {
-    const due = S.words.filter(w => w.seen && w.due <= now).sort((a, b) => a.box - b.box || a.due - b.due);
+    // Чем ниже уровень, чем больше доля ошибок, чем дольше слово ждёт и чем медленнее оно вспоминается, тем раньше оно попадает в практику.
+    const need = w => (5 - w.box) * 2 + w.bad / Math.max(1, w.ok + w.bad) * 4 + Math.min(7, Math.max(0, (now - w.due) / DAY)) * .5 + Math.min(2, w.ms / 8000);
+    const due = S.words.filter(w => w.seen && w.due <= now).sort((a, b) => need(b) - need(a) || a.due - b.due);
     const fresh = S.words.filter(w => !w.seen).sort((a, b) => a.at - b.at);
     let nNew = Math.min(fresh.length, Math.max(size - due.length, Math.round(size * .3)));
     const nDue = Math.min(due.length, size - nNew);
@@ -528,11 +564,11 @@ function haptic() { try { $('#hap').click(); } catch (e) {} }
 let voices = [];
 function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) {} }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
-function speak(text, force) {
+function speak(text, force, whole) {
   if (!force && !S.settings.voice) return;
   if (!('speechSynthesis' in window)) { if (force) toast('Озвучка недоступна в этом браузере'); return; }
   try {
-    const acc = S.settings.accent, t = variants(text)[0] || text;
+    const acc = S.settings.accent, t = whole ? text : (variants(text)[0] || text);
     const u = new SpeechSynthesisUtterance(t.replace(/\([^)]*\)/g, ' '));
     u.lang = acc; u.rate = .92;
     if (!voices.length) loadVoices();
@@ -786,7 +822,7 @@ function renderProfile() {
         </div>
       </div>
       <button type="button" class="btn danger" data-act="wipe">Стереть все данные</button>
-      <p class="foot">Слова, версия 1.1. В словаре ${c.total} ${plural(c.total, 'слово', 'слова', 'слов')}, ответов за всё время ${S.words.reduce((a, w) => a + w.ok + w.bad, 0)}.</p>
+      <p class="foot">Слова, версия 1.2. Примеры предложений: Tatoeba, CC BY 2.0 FR. В словаре ${c.total} ${plural(c.total, 'слово', 'слова', 'слов')}, ответов за всё время ${S.words.reduce((a, w) => a + w.ok + w.bad, 0)}.</p>
     </div></div>`;
 }
 
@@ -815,7 +851,7 @@ function wordForm(w) {
   return `
     <label class="fld"><span>Слово на английском</span><input class="en" id="fEn" enterkeyhint="next" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" value="${esc(w?.en)}" placeholder="car"></label>
     <label class="fld"><span>Перевод на русском</span><input id="fRu" enterkeyhint="done" autocomplete="off" autocapitalize="none" value="${esc(w?.ru)}" placeholder="машина"><small>Несколько вариантов запиши через запятую</small></label>
-    <label class="fld"><span>Пример или заметка, если нужно</span><input id="fNote" enterkeyhint="done" autocomplete="off" value="${esc(w?.note)}" placeholder="My car is red"></label>
+    <label class="fld"><span>Своя заметка, если нужно</span><input id="fNote" enterkeyhint="done" autocomplete="off" value="${esc(w?.note)}" placeholder="Например: неправильный глагол"><small>Примеры предложений приложение подберёт само</small></label>
     <div class="err" id="fErr"></div>`;
 }
 function openAdd() {
@@ -834,7 +870,7 @@ function openAdd() {
   }
 }
 function makeWord(en, ru, note) {
-  return { id: (S.seq++).toString(36), en: en.trim(), ru: ru.trim(), note: (note || '').trim(), at: Date.now(), box: 0, due: 0, ok: 0, bad: 0, run: 0, last: 0, learnedAt: 0, seen: false };
+  return { id: (S.seq++).toString(36), en: en.trim(), ru: ru.trim(), note: (note || '').trim(), at: Date.now(), box: 0, due: 0, ok: 0, bad: 0, run: 0, last: 0, learnedAt: 0, seen: false, ex: [], exAt: 0, ms: 0 };
 }
 const hasWord = (en, skip) => S.words.some(w => w.id !== skip && norm(w.en, 'en') === norm(en, 'en'));
 function saveNew() {
@@ -842,7 +878,7 @@ function saveNew() {
   const en = $('#fEn').value, ru = $('#fRu').value, err = $('#fErr');
   if (!norm(en) || !norm(ru)) { err.textContent = 'Заполни слово и перевод'; return; }
   if (hasWord(en)) { err.textContent = 'Такое слово уже есть в словаре'; return; }
-  S.words.push(makeWord(en, ru, $('#fNote').value)); save();
+  const nw = makeWord(en, ru, $('#fNote').value); S.words.push(nw); save(); exWant(nw);
   $('#fEn').value = $('#fRu').value = $('#fNote').value = ''; err.textContent = '';
   $('#fEn').focus({ preventScroll: true }); toast('Слово добавлено'); sfx('tick'); haptic(); render();
 }
@@ -858,7 +894,7 @@ function saveBulk() {
     const w = makeWord(a, b); w.at += added; S.words.push(w); added++;
   }
   if (!added) { $('#fErr').textContent = skipped ? 'Не получилось разобрать строки. Пример: car - машина' : 'Впиши хотя бы одну строку'; return; }
-  save(); closeSheet(); render();
+  save(); closeSheet(); render(); exFill();
   toast(`Добавлено: ${added}${skipped ? `, пропущено: ${skipped}` : ''}`); sfx('tick');
 }
 function openEdit(id) {
@@ -867,7 +903,7 @@ function openEdit(id) {
   const when = !w.seen ? 'ещё не было в практике' : w.due <= now ? 'пора повторить' : (() => { const d = Math.round((dayStart(w.due) - dayStart(now)) / DAY); return d <= 1 ? 'повторение завтра' : `повторение через ${d} ${plural(d, 'день', 'дня', 'дней')}`; })();
   const stName = { fresh: 'Новое', learning: 'Учу', learned: 'Выучено' }[wordStatus(w)];
   openSheet(`<h2>Слово</h2>
-    <div class="meta"><b>${stName}</b>, ${when}. Верных ответов <b>${w.ok}</b>, ошибок <b>${w.bad}</b>.</div>
+    <div class="meta"><b>${stName}</b>, ${when}. Верных ответов <b>${w.ok}</b>, ошибок <b>${w.bad}</b>.${w.ms ? ` Среднее время ответа <b>${(w.ms / 1000).toFixed(1).replace('.', ',')} с</b>.` : ''}</div>
     <form id="editForm" novalidate>${wordForm(w)}
       <button class="btn primary">Сохранить изменения</button>
       <button type="button" class="btn danger" id="del">Удалить слово</button>
@@ -878,7 +914,10 @@ function openEdit(id) {
     const en = $('#fEn').value, ru = $('#fRu').value;
     if (!norm(en) || !norm(ru)) { $('#fErr').textContent = 'Заполни слово и перевод'; return; }
     if (hasWord(en, w.id)) { $('#fErr').textContent = 'Такое слово уже есть в словаре'; return; }
-    w.en = en.trim(); w.ru = ru.trim(); w.note = $('#fNote').value.trim(); save(); closeSheet(); render(); toast('Изменения сохранены');
+    const changed = norm(en, 'en') !== norm(w.en, 'en');
+    w.en = en.trim(); w.ru = ru.trim(); w.note = $('#fNote').value.trim();
+    if (changed) { w.ex = []; w.exAt = 0; }
+    save(); closeSheet(); render(); toast('Изменения сохранены'); if (changed) exWant(w);
   });
   $('#del').onclick = () => confirmSheet('Удалить слово?', `«${esc(w.en)}» исчезнет из словаря вместе с прогрессом.`, 'Удалить', () => {
     S.words = S.words.filter(x => x !== w); save(); render(); toast('Слово удалено');
@@ -892,14 +931,124 @@ function openName(first) {
   $('#nameForm').addEventListener('submit', e => { e.preventDefault(); S.profile.name = $('#fName').value.trim(); S.profile.welcomed = true; save(); closeSheet(); render(); });
 }
 
+/* ================= example sentences (Tatoeba) ================= */
+// Примеры берутся из открытой базы Tatoeba и сохраняются вместе со словом, поэтому потом работают без интернета.
+const EX_RETRY = 14 * DAY;
+const exQ = [], exForce = new Set();
+let exBusy = false;
+function exQuery(en) {
+  let t = String(variants(en)[0] || en).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[’`ʼ]/g, "'")
+    .replace(/[^\p{L}\p{N}' -]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  t = t.replace(/^(to|a|an|the) (?=\S)/, '');
+  return /[a-z]/.test(t) ? t : '';
+}
+const exNeeds = w => !w.exAt || (!(w.ex && w.ex.length) && Date.now() - w.exAt > EX_RETRY);
+function exPick(rows) {
+  const seen = new Set(), all = [];
+  for (const s of rows) {
+    const e = String((s && s.text) || '').replace(/\s+/g, ' ').trim();
+    if (e.length < 8 || e.length > 90) continue;
+    const key = e.toLowerCase(); if (seen.has(key)) continue; seen.add(key);
+    const tr = [].concat(...(Array.isArray(s.translations) ? s.translations : [])).find(x => x && x.lang === 'rus' && x.text);
+    const r = tr ? String(tr.text).replace(/\s+/g, ' ').trim() : '';
+    all.push({ e, r: r.length <= 120 ? r : '' });
+  }
+  all.sort((a, b) => (b.r ? 1 : 0) - (a.r ? 1 : 0) || Math.abs(a.e.length - 38) - Math.abs(b.e.length - 38));
+  const out = [], starts = new Set();
+  for (const pass of [0, 1]) for (const x of all) {
+    if (out.length >= 3) break;
+    if (out.includes(x)) continue;
+    const st = x.e.toLowerCase().split(' ').slice(0, 2).join(' ');
+    if (pass === 0 && starts.has(st)) continue;
+    starts.add(st); out.push(x);
+  }
+  return out;
+}
+async function exGet(url) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (r.status === 400) return [];
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json();
+    return Array.isArray(j.data) ? j.data : [];
+  } finally { clearTimeout(t); }
+}
+async function exFetch(en) {
+  const q = exQuery(en); if (!q) return [];
+  const base = 'https://api.tatoeba.org/v1/sentences?lang=eng&is_unapproved=no&sort=random&limit=14&word_count=3-12&q='
+    + encodeURIComponent(q.includes(' ') ? `"${q}"` : q);
+  const rows = await exGet(base + '&trans:lang=rus&trans:is_direct=yes&showtrans:lang=rus&showtrans:is_direct=yes');
+  let list = exPick(rows);
+  if (list.length < 2) list = exPick(rows.concat(await exGet(base + '&showtrans=none')));
+  return list;
+}
+function exWant(w, front) {
+  if (!w) return;
+  const i = exQ.indexOf(w.id);
+  if (i >= 0) { if (!front) return; exQ.splice(i, 1); }
+  if (front) exQ.unshift(w.id); else exQ.push(w.id);
+  exPump();
+}
+async function exPump() {
+  if (exBusy || !exQ.length || navigator.onLine === false) return;
+  exBusy = true;
+  const id = exQ.shift(), w = wordById(id), force = exForce.delete(id);
+  let net = true;
+  if (w && (force || exNeeds(w))) {
+    try {
+      const list = await exFetch(w.en);
+      if (wordById(id) === w) {
+        if (list.length || !force) w.ex = list;
+        w.exAt = Date.now(); save(); exShow(w);
+        if (force && !list.length) toast('Других примеров не нашлось');
+      }
+    } catch (e) { net = false; exShow(w, true); if (force) toast('Не получилось загрузить примеры'); }
+  }
+  exBusy = false;
+  if (exQ.length) setTimeout(exPump, net ? 700 : 20000);
+}
+function exFill() {
+  let n = 0;
+  for (const w of S.words) { if (n >= 40) break; if (exNeeds(w) && !exQ.includes(w.id)) { exQ.push(w.id); n++; } }
+  exPump();
+}
+addEventListener('online', () => exPump());
+function markWord(sentence, en) {
+  const q = exQuery(en); if (!q) return esc(sentence);
+  const toks = q.split(' ').map(t => {
+    const safe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (t.length <= 4) return safe(t) + "(?:s|es|ed|ing|'s)?";
+    return safe(t.replace(/(ies|ing|ed|e|y|s)$/, '')) + "[\\p{L}']{0,5}";
+  });
+  let m = null;
+  try { m = new RegExp('(^|[^\\p{L}])(' + toks.join('[^\\p{L}]+') + ')(?![\\p{L}])', 'iu').exec(sentence); } catch (e) {}
+  if (!m) return esc(sentence);
+  const at = m.index + m[1].length;
+  return esc(sentence.slice(0, at)) + '<mark>' + esc(m[2]) + '</mark>' + esc(sentence.slice(at + m[2].length));
+}
+function exShow(w, failed) { if (ses && !ses.finished && ses.phase === 'review' && cur().w === w) renderExamples(w, failed); }
+function renderExamples(w, failed) {
+  const box = $('#cEx'); if (!box) return;
+  if (w.ex && w.ex.length) {
+    box.innerHTML = w.ex.map((x, i) => `<button type="button" class="ex" data-act="sayEx" data-i="${i}"><span class="e">${markWord(x.e, w.en)}</span>${x.r ? `<span class="r">${esc(x.r)}</span>` : ''}</button>`).join('')
+      + '<button type="button" class="ex-more" data-act="moreEx">Другие примеры</button>';
+  } else if (!exQuery(w.en)) box.innerHTML = '';
+  else if (failed || navigator.onLine === false) box.innerHTML = '<p class="ex-info">Примеры появятся, когда будет интернет</p>';
+  else if (!exNeeds(w)) box.innerHTML = '<p class="ex-info">Для этого слова примеров не нашлось</p>';
+  else { box.innerHTML = '<p class="ex-info">Ищу примеры…</p>'; exWant(w, true); }
+}
+
 /* ================= practice session ================= */
+// Карточка не уходит сама: после ответа она остаётся с озвучкой и примерами, дальше ведёт кнопка.
 const sesEl = $('#session');
-let ses = null, nextT = 0;
+let ses = null, flatT = 0;
 const wsize = t => { const n = t.length; return n <= 8 ? 46 : n <= 13 ? 38 : n <= 20 ? 30 : n <= 34 ? 24 : 20; };
 function startSession(mode) {
   const queue = buildQueue(mode);
   if (!queue.length) { toast(mode === 'hard' ? 'Трудных слов сейчас нет' : 'Сначала добавь слова'); return; }
   ses = { mode, queue, i: 0, total: queue.length, done: 0, right: 0, wrong: [], phase: 'ask' };
+  sesEl.className = 'session';
   sesEl.innerHTML = `
     <div class="s-top">
       <button type="button" class="s-close keep" data-act="closeSession" aria-label="Закончить практику">${IC.close}</button>
@@ -907,20 +1056,29 @@ function startSession(mode) {
     </div>
     <div class="s-stage" id="sStage"><div class="card" id="card">
       <div class="face front"><span class="lang" id="cLangF"></span><button type="button" class="say keep" data-act="sayCard" id="cSayF" aria-label="Произнести">${IC.say}</button><div class="word" id="cWordF"></div></div>
-      <div class="face back"><span class="lang" id="cLangB"></span><button type="button" class="say keep" data-act="sayCard" aria-label="Произнести">${IC.say}</button>
-        <div class="src" id="cSrc"></div><div class="word"><span class="hl" id="cWordB"></span></div><div class="note" id="cNote"></div><div class="verdict" id="cVerdict"></div></div>
+      <div class="face back" id="cBack">
+        <div class="b-top"><span class="lang" id="cLangB"></span><span class="verdict" id="cVerdict"></span></div>
+        <div class="b-main">
+          <div class="src" id="cSrc"></div><div class="word"><span class="hl" id="cWordB"></span></div>
+          <button type="button" class="listen keep" data-act="sayCard">${IC.say}<span>Послушать</span></button>
+          <div class="note" id="cNote"></div>
+        </div>
+        <div class="exs" id="cEx"></div>
+      </div>
     </div></div>
     <div class="s-fb" id="sFb" aria-live="polite"></div>
     <form class="s-form" id="sForm" novalidate>
       <input id="sIn" type="text" enterkeyhint="go" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="Твой ответ">
       <button class="s-go keep" id="sGo" aria-label="Проверить">${IC.check}</button>
     </form>
-    <button type="button" class="s-skip keep" id="sSkip" data-act="skip">Не знаю</button>`;
+    <button type="button" class="s-skip keep" id="sSkip" data-act="skip">Не знаю</button>
+    <button type="button" class="btn mark s-next" id="sNext" data-act="next">Дальше</button>`;
   sesEl.hidden = false;
   $('#sForm').addEventListener('submit', e => { e.preventDefault(); submitAnswer(); });
   $$('.keep', sesEl).forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
   showCard();
   $('#sIn').focus({ preventScroll: true });
+  for (const c of queue.slice().reverse()) if (exNeeds(c.w)) exWant(c.w, true);
 }
 function keepFocus() { const i = $('#sIn'); if (i && document.activeElement !== i) i.focus({ preventScroll: true }); }
 const cur = () => ses.queue[ses.i];
@@ -928,7 +1086,9 @@ function showCard() {
   const c = cur(), card = $('#card'), ruEn = c.dir === 'ru-en';
   const q = ruEn ? c.w.ru : c.w.en, a = ruEn ? c.w.en : c.w.ru;
   const stage = $('#sStage');
+  clearTimeout(flatT);
   c.nearUsed = false; ses.phase = 'ask'; ses.moving = false;
+  sesEl.classList.remove('review');
   card.style.transition = 'none'; card.className = 'card'; void card.offsetWidth; card.style.transition = '';
   stage.classList.remove('outa', 'in'); void stage.offsetWidth; stage.classList.add('in');
   $('#cLangF').textContent = ruEn ? 'Русский' : 'English';
@@ -937,6 +1097,8 @@ function showCard() {
   const wf = $('#cWordF'); wf.textContent = q; wf.style.fontSize = wsize(q) + 'px';
   const wb = $('#cWordB'); wb.textContent = a; wb.parentElement.style.fontSize = wsize(a) + 'px';
   $('#cSrc').textContent = q; $('#cNote').textContent = c.w.note; $('#cNote').hidden = !c.w.note;
+  $('#cEx').innerHTML = ''; $('#cBack').scrollTop = 0;
+  c.t0 = performance.now();
   const inp = $('#sIn'); inp.value = ''; inp.lang = ruEn ? 'en' : 'ru';
   inp.placeholder = ruEn ? 'Напиши по-английски' : 'Напиши по-русски';
   $('#sFb').textContent = c.first ? '' : 'Это слово уже было. Попробуй ещё раз';
@@ -946,18 +1108,28 @@ function showCard() {
   if (!ruEn) speak(c.w.en);
 }
 function reveal(ok) {
-  const card = $('#card');
+  const card = $('#card'), me = ses, c = cur();
   card.classList.add(ok ? 'ok' : 'bad', 'flip');
   $('#cVerdict').innerHTML = ok ? IC.vOk + 'Верно' : IC.vBad + 'Правильный ответ';
+  // После переворота карточка становится обычной плоской: так её можно листать и нажимать без сбоев.
+  clearTimeout(flatT);
+  flatT = setTimeout(() => { if (ses === me && !ses.moving && cur() === c) card.classList.add('flat'); }, 720);
+}
+function enterReview() {
+  const c = cur();
+  ses.phase = 'review';
+  document.activeElement?.blur?.();
+  sesEl.classList.add('review');
+  $('#sNext').textContent = ses.i + 1 >= ses.queue.length ? 'Завершить практику' : 'Дальше';
+  renderExamples(c.w);
 }
 function shake() { const f = $('#sForm'); f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); }
 function submitAnswer() {
-  if (!ses || ses.finished || ses.moving || ses.phase === 'done') return;
+  if (!ses || ses.finished || ses.moving || ses.phase === 'review') return;
   keepFocus();
   const c = cur(), val = $('#sIn').value;
   if (ses.phase === 'fix') {
-    if (!val.trim()) { goNext(); return; }
-    if (judge(val, c) === 'ok') { ses.phase = 'done'; $('#sFb').textContent = 'Теперь верно. Слово вернётся в этой практике'; sfx('tick'); haptic(); nextT = setTimeout(goNext, 800); }
+    if (judge(val, c) === 'ok') { sfx('tick'); haptic(); enterReview(); }
     else { shake(); haptic(); }
     return;
   }
@@ -969,14 +1141,18 @@ function submitAnswer() {
   fail(c);
 }
 function success(c) {
-  if (c.first) { grade(c, true); ses.right++; }
-  ses.done++; ses.phase = 'done';
+  if (c.first) { grade(c, true, c.nearUsed ? 0 : performance.now() - c.t0); ses.right++; }
+  ses.done++;
   reveal(true); sfx('ok'); haptic();
   $('#sFb').textContent = ''; $('#sBar').style.width = (ses.done / ses.total * 100) + '%';
-  const r = $('#sStage').getBoundingClientRect(), o = $('#app').getBoundingClientRect();
-  setTimeout(() => burst(r.left - o.left + r.width / 2, r.top - o.top + r.height / 2, 26, 9), 260);
-  if (c.dir === 'ru-en') speak(c.w.en);
-  nextT = setTimeout(goNext, 1450);
+  speak(c.w.en);
+  enterReview();
+  const me = ses;
+  setTimeout(() => {
+    if (ses !== me || !$('#sStage')) return;
+    const r = $('#sStage').getBoundingClientRect(), o = $('#app').getBoundingClientRect();
+    burst(r.left - o.left + r.width / 2, r.top - o.top + Math.min(r.height / 2, 170), 26, 9);
+  }, 260);
 }
 function fail(c) {
   if (c.first) { grade(c, false); ses.wrong.push(c.w); }
@@ -986,14 +1162,17 @@ function fail(c) {
   reveal(false); sfx('bad'); haptic(); speak(c.w.en);
   $('#sIn').value = ''; $('#sIn').placeholder = 'Перепиши правильный ответ';
   $('#sFb').textContent = 'Напиши ответ сам, так он запомнится';
-  $('#sSkip').textContent = 'Дальше'; $('#sGo').innerHTML = IC.next;
+  $('#sSkip').textContent = 'Пропустить'; $('#sGo').innerHTML = IC.next;
 }
 function goNext() {
-  clearTimeout(nextT);
-  if (!ses || ses.finished || ses.moving) return;
+  if (!ses || ses.finished || ses.moving || ses.phase !== 'review') return;
+  clearTimeout(flatT);
   ses.i++;
   if (ses.i >= ses.queue.length) return finish();
   const me = ses; ses.moving = true;
+  // Поле ответа возвращается прямо в момент нажатия, чтобы iPhone снова открыл клавиатуру.
+  sesEl.classList.remove('review');
+  const inp = $('#sIn'); inp.value = ''; inp.focus({ preventScroll: true });
   $('#sStage').classList.add('outa');
   setTimeout(() => { if (ses === me) showCard(); }, 190);
 }
@@ -1001,7 +1180,9 @@ function finish() {
   const total = ses.total, right = ses.right, pct = Math.round(right / total * 100), miss = ses.wrong;
   const title = pct === 100 ? 'Без единой ошибки' : pct >= 80 ? 'Отличная практика' : pct >= 50 ? 'Хорошая работа' : 'Практика засчитана';
   const text = pct === 100 ? 'Все слова с первой попытки.' : `С первой попытки ${right} из ${total}. ${miss.length ? 'Слова с ошибками вернутся в следующей практике.' : ''}`;
+  clearTimeout(flatT);
   document.activeElement?.blur?.();
+  sesEl.className = 'session';
   sesEl.innerHTML = `<div class="sum">
     <div class="ringbox">${ring(pct / 100, 150, 14)}<b data-count="${pct}" data-suf="%">${pct}%</b></div>
     <h2>${title}</h2><p>${text}</p>
@@ -1013,9 +1194,9 @@ function finish() {
   ses = { finished: true, mode: ses.mode };
 }
 function closeSession() {
-  clearTimeout(nextT); try { speechSynthesis.cancel(); } catch (e) {}
+  clearTimeout(flatT); try { speechSynthesis.cancel(); } catch (e) {}
   document.activeElement?.blur?.();
-  ses = null; sesEl.hidden = true; sesEl.innerHTML = ''; render(); applyUpdate();
+  ses = null; sesEl.hidden = true; sesEl.className = 'session'; sesEl.innerHTML = ''; render(); applyUpdate();
 }
 
 /* ================= backup ================= */
@@ -1051,13 +1232,16 @@ const ACT = {
   startHard: () => startSession('hard'),
   again: () => startSession(ses?.mode === 'hard' && hardWords().length ? 'hard' : 'smart'),
   closeSession,
-  skip: () => { if (!ses || ses.finished || ses.moving || ses.phase === 'done') return; keepFocus(); ses.phase === 'fix' ? goNext() : fail(cur()); },
-  sayCard: () => { if (ses && !ses.finished) { keepFocus(); speak(cur().w.en, true); } },
+  skip: () => { if (!ses || ses.finished || ses.moving || ses.phase === 'review') return; if (ses.phase === 'fix') enterReview(); else { keepFocus(); fail(cur()); } },
+  next: () => goNext(),
+  sayEx: el => { if (!ses || ses.finished) return; const x = (cur().w.ex || [])[+el.dataset.i]; if (x) speak(x.e, true, true); },
+  moreEx: el => { if (!ses || ses.finished || ses.phase !== 'review') return; const w = cur().w; el.disabled = true; el.textContent = 'Ищу…'; exForce.add(w.id); exWant(w, true); },
+  sayCard: () => { if (ses && !ses.finished) { if (ses.phase !== 'review') keepFocus(); speak(cur().w.en, true); } },
   say: (el, e) => { e.stopPropagation(); const w = wordById(el.dataset.id); if (w) speak(w.en, true); },
   addWord: () => openAdd(),
   editWord: el => openEdit(el.dataset.id),
   filter: el => { wFilter = el.dataset.f; renderWordList(); },
-  demo: () => { let k = 0; for (const [en, ru] of DEMO) if (!hasWord(en)) { const w = makeWord(en, ru); w.at += k++; S.words.push(w); } save(); render(); toast('Добавлено 12 слов'); },
+  demo: () => { let k = 0; for (const [en, ru] of DEMO) if (!hasWord(en)) { const w = makeWord(en, ru); w.at += k++; S.words.push(w); } save(); render(); exFill(); toast('Добавлено 12 слов'); },
   closeSheet,
   editName: () => openName(false),
   toggle: el => { const k = el.dataset.k; S.settings[k] = !S.settings[k]; save(); el.classList.toggle('on', S.settings[k]); el.setAttribute('aria-checked', S.settings[k]); if (S.settings[k]) k === 'sound' ? sfx('ok') : speak('Hello', true); },
@@ -1109,7 +1293,7 @@ document.addEventListener('focusout', () => setTimeout(() => {
 }, 80));
 
 // Страница целиком никогда не двигается: палец прокручивает только экраны со списками.
-const SCROLLERS = '.view,.sheet,.sum,.chips,textarea';
+const SCROLLERS = '.view,.sheet,.sum,.chips,.face.back,textarea';
 document.addEventListener('touchmove', e => {
   if (!e.cancelable) return;
   if (e.touches.length > 1) { e.preventDefault(); return; }
@@ -1142,6 +1326,7 @@ addEventListener('scroll', () => { if (!document.activeElement?.matches?.('input
 $('#fab').innerHTML = IC.plus;
 applyTheme(); renderTabs(); render(); fxSize();
 setTimeout(() => { if (!S.profile.welcomed && !S.words.length && idle()) openName(true); }, 450);
+setTimeout(exFill, 3500);
 // Если основная память оказалась пустой или старее запасной, берём запасную копию.
 idb.get().then(raw => {
   if (!raw) { if (S.words.length) flush(); return; }
@@ -1161,7 +1346,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   });
   navigator.serviceWorker.ready.then(reg => { try { (navigator.serviceWorker.controller || reg.active)?.postMessage({ type: 'ready' }); } catch (e) {} });
 }
-window.__slova = { get S() { return S; }, judge, norm, buildQueue, grade, periodStats, streak, save, counts, hardWords, idb, flush };
+window.__slova = { get S() { return S; }, judge, norm, buildQueue, grade, periodStats, streak, save, counts, hardWords, idb, flush, quickLimit, exFetch, exQuery, exPick, markWord };
 })();
 </script>
 </body>
