@@ -934,7 +934,7 @@ function openName(first) {
 /* ================= example sentences (Tatoeba) ================= */
 // Примеры берутся из открытой базы Tatoeba и сохраняются вместе со словом, поэтому потом работают без интернета.
 const EX_RETRY = 14 * DAY;
-const exQ = [], exForce = new Set();
+const exQ = [], exForce = new Set(), exTries = {};
 let exBusy = false;
 function exQuery(en) {
   let t = String(variants(en)[0] || en).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[’`ʼ]/g, "'")
@@ -943,7 +943,7 @@ function exQuery(en) {
   return /[a-z]/.test(t) ? t : '';
 }
 const exNeeds = w => !w.exAt || (!(w.ex && w.ex.length) && Date.now() - w.exAt > EX_RETRY);
-function exPick(rows) {
+function exPick(rows, en) {
   const seen = new Set(), all = [];
   for (const s of rows) {
     const e = String((s && s.text) || '').replace(/\s+/g, ' ').trim();
@@ -951,9 +951,12 @@ function exPick(rows) {
     const key = e.toLowerCase(); if (seen.has(key)) continue; seen.add(key);
     const tr = [].concat(...(Array.isArray(s.translations) ? s.translations : [])).find(x => x && x.lang === 'rus' && x.text);
     const r = tr ? String(tr.text).replace(/\s+/g, ' ').trim() : '';
-    all.push({ e, r: r.length <= 120 ? r : '' });
+    all.push({ e, r: r.length <= 120 ? r : '', hit: en ? markWord(e, en).includes('<mark>') : true });
   }
-  all.sort((a, b) => (b.r ? 1 : 0) - (a.r ? 1 : 0) || Math.abs(a.e.length - 38) - Math.abs(b.e.length - 38));
+  // Сначала предложения, где слово действительно стоит в тексте; если таких хватает, остальные не нужны.
+  const hits = all.filter(x => x.hit);
+  if (hits.length >= 2) all.splice(0, all.length, ...hits);
+  all.sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0) || (b.r ? 1 : 0) - (a.r ? 1 : 0) || Math.abs(a.e.length - 38) - Math.abs(b.e.length - 38));
   const out = [], starts = new Set();
   for (const pass of [0, 1]) for (const x of all) {
     if (out.length >= 3) break;
@@ -962,10 +965,10 @@ function exPick(rows) {
     if (pass === 0 && starts.has(st)) continue;
     starts.add(st); out.push(x);
   }
-  return out;
+  return out.map(x => ({ e: x.e, r: x.r }));
 }
 async function exGet(url) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
   try {
     const r = await fetch(url, { signal: ctl.signal });
     if (r.status === 400) return [];
@@ -977,10 +980,10 @@ async function exGet(url) {
 async function exFetch(en) {
   const q = exQuery(en); if (!q) return [];
   const base = 'https://api.tatoeba.org/v1/sentences?lang=eng&is_unapproved=no&sort=random&limit=14&word_count=3-12&q='
-    + encodeURIComponent(q.includes(' ') ? `"${q}"` : q);
+    + encodeURIComponent(/[ -]/.test(q) ? `"${q}"` : q);
   const rows = await exGet(base + '&trans:lang=rus&trans:is_direct=yes&showtrans:lang=rus&showtrans:is_direct=yes');
-  let list = exPick(rows);
-  if (list.length < 2) list = exPick(rows.concat(await exGet(base + '&showtrans=none')));
+  let list = exPick(rows, en);
+  if (list.length < 2) list = exPick(rows.concat(await exGet(base + '&showtrans=none')), en);
   return list;
 }
 function exWant(w, front) {
@@ -1003,10 +1006,14 @@ async function exPump() {
         w.exAt = Date.now(); save(); exShow(w);
         if (force && !list.length) toast('Других примеров не нашлось');
       }
-    } catch (e) { net = false; exShow(w, true); if (force) toast('Не получилось загрузить примеры'); }
+    } catch (e) {
+      net = false; exShow(w, true);
+      exTries[id] = (exTries[id] || 0) + 1;
+      if (exTries[id] < 2) exQ.push(id);          // одна повторная попытка позже
+    }
   }
   exBusy = false;
-  if (exQ.length) setTimeout(exPump, net ? 700 : 20000);
+  if (exQ.length) setTimeout(exPump, net ? 700 : 8000);
 }
 function exFill() {
   let n = 0;
@@ -1034,7 +1041,8 @@ function renderExamples(w, failed) {
     box.innerHTML = w.ex.map((x, i) => `<button type="button" class="ex" data-act="sayEx" data-i="${i}"><span class="e">${markWord(x.e, w.en)}</span>${x.r ? `<span class="r">${esc(x.r)}</span>` : ''}</button>`).join('')
       + '<button type="button" class="ex-more" data-act="moreEx">Другие примеры</button>';
   } else if (!exQuery(w.en)) box.innerHTML = '';
-  else if (failed || navigator.onLine === false) box.innerHTML = '<p class="ex-info">Примеры появятся, когда будет интернет</p>';
+  else if (navigator.onLine === false) box.innerHTML = '<p class="ex-info">Примеры появятся, когда будет интернет</p>';
+  else if (failed) box.innerHTML = '<p class="ex-info">Не получилось загрузить примеры</p><button type="button" class="ex-more" data-act="moreEx">Попробовать ещё раз</button>';
   else if (!exNeeds(w)) box.innerHTML = '<p class="ex-info">Для этого слова примеров не нашлось</p>';
   else { box.innerHTML = '<p class="ex-info">Ищу примеры…</p>'; exWant(w, true); }
 }
